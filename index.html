@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EVS B.Tech 1st Sem Logbook</title>
+    <script src="https://jsdelivr.net"></script>
+    <style>
+        :root {
+            --primary: #2d6a4f;
+            --secondary: #40916c;
+            --light: #d8f3dc;
+            --dark: #1b4332;
+            --accent: #ff9f1c;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f9f4;
+            color: var(--dark);
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border-top: 8px solid var(--primary);
+        }
+        h1, h2 {
+            text-align: center;
+            color: var(--dark);
+        }
+        .auth-box {
+            background: var(--light);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        input[type="password"], input[type="date"], select, textarea {
+            padding: 10px;
+            border: 2px solid var(--secondary);
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .student-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 2fr;
+            gap: 15px;
+            align-items: center;
+            background: #fafafa;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border-left: 4px solid var(--secondary);
+        }
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+        }
+        button:hover { background-color: var(--dark); }
+        .disabled { display: none; }
+        .log-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 30px;
+        }
+        .log-table th, .log-table td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+        .log-table th { background-color: var(--primary); color: white; }
+        .chart-container {
+            width: 100%;
+            max-width: 500px;
+            margin: 30px auto;
+        }
+        .team-list {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .team-badge {
+            background: var(--secondary);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌱 B.Tech EVS Project Logbook</h1>
+        <p style="text-align:center;"><strong>Timeline:</strong> 9 Sept to 28 Oct</p>
+
+        <!-- Team Members List (Explicitly Written) -->
+        <div class="team-list">
+            <span class="team-badge">Nihal</span>
+            <span class="team-badge">Yeshu</span>
+            <span class="team-badge">Yash</span>
+            <span class="team-badge">Chaitanya</span>
+            <span class="team-badge">Mahi</span>
+            <span class="team-badge">Muskan</span>
+            <span class="team-badge">Priyanjali</span>
+            <span class="team-badge">Khushi</span>
+        </div>
+
+        <!-- Admin Access Control -->
+        <div class="auth-box">
+            <label><strong>🔒 Nihal Admin Access (To Edit):</strong> </label>
+            <input type="password" id="adminPass" placeholder="Enter Password" oninput="checkAuth()">
+            <span id="authStatus" style="margin-left:10px; font-weight:bold; color:red;">Locked (View Only)</span>
+        </div>
+
+        <!-- Data Entry Form Panel -->
+        <div id="entryForm" class="disabled">
+            <h2>📅 Daily Progress Entry</h2>
+            <div class="form-group">
+                <label><strong>Select Date:</strong></label>
+                <input type="date" id="logDate" min="2026-09-09" max="2026-10-28">
+            </div>
+            
+            <div id="studentsContainer"></div>
+            
+            <button onclick="submitDailyLog()">Submit Today's Details</button>
+        </div>
+
+        <!-- Progress Chart Dashboard -->
+        <h2>📊 Live Project Contribution Chart</h2>
+        <div class="chart-container">
+            <canvas id="contributionChart"></canvas>
+        </div>
+
+        <!-- Data Table Logs -->
+        <h2>📜 Day-by-Day Logs</h2>
+        <div style="overflow-x:auto;">
+            <table class="log-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Student Name</th>
+                        <th>Attendance</th>
+                        <th>Progress Remarks & Feedback</th>
+                    </tr>
+                </thead>
+                <tbody id="logTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Data list for all 8 team members
+        const students = ["Nihal", "Yeshu", "Yash", "Chaitanya", "Mahi", "Muskan", "Priyanjali", "Khushi"];
+        const CORRECT_PASSWORD = "Nihal@EVS2026";
+        
+        let projectData = JSON.parse(localStorage.getItem('evs_log_data')) || {};
+        let chartInstance = null;
+
+        // Auto-generation of input forms for each student
+        const container = document.getElementById('studentsContainer');
+        students.forEach(st => {
+            container.innerHTML += `
+                <div class="student-row">
+                    <label><strong>${st}</strong></label>
+                    <select id="att-${st}">
+                        <option value="Present">Present</option>
+                        <option value="Absent">Absent</option>
+                    </select>
+                    <textarea id="rem-${st}" placeholder="Work done by ${st} today..."></textarea>
+                </div>
+            `;
+        });
+
+        document.getElementById('logDate').valueAsDate = new Date();
+
+        function checkAuth() {
+            const pass = document.getElementById('adminPass').value;
+            const form = document.getElementById('entryForm');
+            const status = document.getElementById('authStatus');
+            if(pass === CORRECT_PASSWORD) {
+                form.classList.remove('disabled');
+                status.innerText = "Unlocked (Admin Mode)";
+                status.style.color = "green";
+            } else {
+                form.classList.add('disabled');
+                status.innerText = "Locked (View Only)";
+                status.style.color = "red";
+            }
+        }
+
+        function submitDailyLog() {
+            const date = document.getElementById('logDate').value;
+            if(!date) return alert("Please select a date!");
+
+            projectData[date] = [];
+            students.forEach(st => {
+                const att = document.getElementById(`att-${st}`).value;
+                const rem = document.getElementById(`rem-${st}`).value || "No update";
+                projectData[date].push({ name: st, attendance: att, remarks: rem });
+            });
+
+            localStorage.setItem('evs_log_data', JSON.stringify(projectData));
+            alert("Data saved successfully for " + date);
+            
+            students.forEach(st => {
+                document.getElementById(`rem-${st}`).value = "";
+            });
+
+            renderData();
+        }
+
+        function renderData() {
+            const tbody = document.getElementById('logTableBody');
+            tbody.innerHTML = "";
+            
+            let contributionCount = {};
+            students.forEach(st => contributionCount[st] = 0);
+
+            const sortedDates = Object.keys(projectData).sort();
+
+            sortedDates.forEach(date => {
+                projectData[date].forEach(row => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${date}</td>
+                            <td>${row.name}</td>
+                            <td style="color:${row.attendance === 'Present' ? 'green' : 'red'}; font-weight:bold;">${row.attendance}</td>
+                            <td>${row.remarks}</td>
+                        </tr>
+                    `;
+                    if(row.attendance === "Present" && row.remarks !== "No update" && row.remarks.trim() !== "") {
+                        contributionCount[row.name] += 1;
+                    }
+                });
+            });
+
+            updateChart(contributionCount);
+        }
+
+        function updateChart(counts) {
+            const ctx = document.getElementById('contributionChart').getContext('2d');
+            
+            const total = Object.values(counts).reduce((a, b) => a + b, 0);
+            const data = students.map(st => {
+                if(total === 0) return 12.5; // Equal distribution fallback
+                return ((counts[st] / total) * 100).toFixed(1);
+            });
+
+            if(chartInstance) chartInstance.destroy();
+
+            chartInstance = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: students,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: ['#2d6a4f', '#40916c', '#52b788', '#74c69d', '#95d5b2', '#b7e4c7', '#d8f3dc', '#1b4332']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
